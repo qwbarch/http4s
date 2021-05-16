@@ -30,16 +30,101 @@ import scala.concurrent.duration._
   * You can give an instance of this class to the CORS middleware,
   * to specify its behavior
   */
-final case class CORSConfig(
-    anyOrigin: Boolean,
-    allowCredentials: Boolean,
-    maxAge: Long,
-    anyMethod: Boolean = true,
-    allowedOrigins: String => Boolean = _ => false,
-    allowedMethods: Option[Set[String]] = None,
-    allowedHeaders: Option[Set[String]] = Set("Content-Type", "Authorization", "*").some,
-    exposedHeaders: Option[Set[String]] = Set("*").some
-)
+
+final class CORSConfig private (
+    val anyOrigin: Boolean,
+    val allowCredentials: Boolean,
+    val maxAge: FiniteDuration,
+    val anyMethod: Boolean,
+    val allowedOrigins: String => Boolean,
+    val allowedMethods: Option[Set[Method]],
+    val allowedHeaders: Option[Set[String]],
+    val exposedHeaders: Option[Set[String]]
+) {
+
+  private def copy(
+      anyOrigin: Boolean = anyOrigin,
+      allowCredentials: Boolean = allowCredentials,
+      maxAge: FiniteDuration = maxAge,
+      anyMethod: Boolean = anyMethod,
+      allowedOrigins: String => Boolean = allowedOrigins,
+      allowedMethods: Option[Set[Method]] = allowedMethods,
+      allowedHeaders: Option[Set[String]] = allowedHeaders,
+      exposedHeaders: Option[Set[String]] = exposedHeaders
+  ) = new CORSConfig(
+    anyOrigin,
+    allowCredentials,
+    maxAge,
+    anyMethod,
+    allowedOrigins,
+    allowedMethods,
+    allowedHeaders,
+    exposedHeaders
+  )
+
+  def withAnyOrigin(anyOrigin: Boolean): CORSConfig = copy(anyOrigin = anyOrigin)
+
+  def withAllowCredentials(allowCredentials: Boolean): CORSConfig =
+    copy(allowCredentials = allowCredentials)
+
+  def withMaxAge(maxAge: FiniteDuration): CORSConfig = copy(maxAge = maxAge)
+
+  def withAnyMethod(anyMethod: Boolean): CORSConfig = copy(anyMethod = anyMethod)
+
+  def withAllowedOrigins(allowedOrigins: String => Boolean): CORSConfig =
+    copy(allowedOrigins = allowedOrigins)
+
+  def withAllowedMethods(allowedMethods: Option[Set[Method]]): CORSConfig =
+    copy(allowedMethods = allowedMethods)
+
+  def withAllowedHeaders(allowedHeaders: Option[Set[String]]): CORSConfig =
+    copy(allowedHeaders = allowedHeaders)
+
+  def withExposedHeaders(exposedHeaders: Option[Set[String]]): CORSConfig =
+    copy(exposedHeaders = exposedHeaders)
+
+  override def equals(x: Any): Boolean = x match {
+    case config: CORSConfig =>
+      anyOrigin === config.anyOrigin &&
+        allowCredentials === config.allowCredentials &&
+        maxAge === config.maxAge &&
+        anyMethod === config.anyMethod &&
+        allowedOrigins == config.allowedOrigins &&
+        allowedMethods === config.allowedMethods &&
+        allowedHeaders === config.allowedHeaders &&
+        exposedHeaders === config.exposedHeaders
+    case _ => false
+  }
+
+  override def hashCode(): Int =
+    Objects.hashCode(
+      anyOrigin,
+      allowCredentials,
+      maxAge,
+      anyMethod,
+      allowedOrigins,
+      allowedMethods,
+      allowedHeaders,
+      exposedHeaders
+    )
+
+  override def toString(): String =
+    s"CORSConfig($anyOrigin,$allowCredentials,$maxAge,$anyMethod,$allowedOrigins,$allowedMethods,$allowedHeaders,$exposedHeaders)"
+}
+
+object CORSConfig {
+
+  val default: CORSConfig = new CORSConfig(
+    anyOrigin = true,
+    allowCredentials = true,
+    maxAge = 1.day,
+    anyMethod = true,
+    allowedOrigins = _ => false,
+    allowedMethods = None,
+    allowedHeaders = Set("Content-Type", "Authorization", "*").some,
+    exposedHeaders = Set("*").some
+  )
+}
 
 object CORS {
   private[CORS] val logger = getLogger
